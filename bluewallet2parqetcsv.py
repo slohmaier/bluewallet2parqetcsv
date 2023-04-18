@@ -11,23 +11,36 @@ You should have received a copy of the GNU General Public License along with thi
 import argparse
 import csv
 import os
-import re
+import pandas as pd
+import requests
 import sys
+import time
+from datetime import datetime, timedelta
+
+pd.set_option('expand_frame_repr', False)
 
 _MONTHDICT = {
-    'Jan': '1',
-    'Feb': '2',
-    'Mar': '3',
-    'Apr': '4',
-    'May': '5',
-    'Jun': '6',
-    'Jul': '7',
-    'Aug': '8',
-    'Sep': '9',
+    'Jan': '01',
+    'Feb': '02',
+    'Mar': '03',
+    'Apr': '04',
+    'May': '05',
+    'Jun': '06',
+    'Jul': '07',
+    'Aug': '08',
+    'Sep': '09',
     'Oct': '10',
     'Nov': '11',
     'Dec': '12',
 }
+
+def get_price(d: datetime) -> float:
+    #construct url with timestamp in unix time fromat
+    url = 'https://min-api.cryptocompare.com/data/pricehistorical?fsym=BTC&tsyms=EUR&ts='
+    url += str(int(time.mktime(d.timetuple())))
+
+    response = requests.get(url)
+    return float(response.json()['BTC']['EUR'])
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser('bluewallet2parqetcsv',
@@ -58,19 +71,32 @@ if __name__ == '__main__':
         for month in _MONTHDICT.keys():
             date = date.replace(' '+month+' ', ' '+_MONTHDICT[month]+' ')
         date = date.split(' ')
-        time = date[4]
-        date = '{0}-{1}-{2}'.format(date[3], date[1], date[2])
+        timeStr = date[4]
+        timeParts = timeStr.split(':')
+        dateStr = '{0}-{1}-{2}'.format(date[3], date[1], date[2])
+        dt = datetime(
+            int(date[3]),
+            int(date[1]),
+            int(date[2]),
+            int(timeParts[0]),
+            int(timeParts[1]),
+            int(timeParts[2])
+        )
 
         _type = 'TransferIn'
         assetType = 'Crypto'
         identifier = 'BTC'
-        amount = row[2]
+        shares = row[2]
+        price = str(int(get_price(dt)))
+        currency = 'EUR'
+        tax = '9'
+        fee = '0'
 
-        rows.append([date, time, identifier, amount, assetType, _type])
+        rows.append([dateStr, timeStr, identifier, shares, assetType, _type, price, currency, tax, fee])
 
     pcsvFile = open(args.pcsv, 'w+')
     pcsv = csv.writer(pcsvFile, 'unix', quoting=0, delimiter=';')
-    pcsv.writerow(['date', 'time', 'identifier', 'amount', 'assetType', 'type'])
+    pcsv.writerow(['date', 'time', 'identifier', 'shares', 'assetType', 'type', 'price', 'currency', 'tax', 'fee'])
 
     for row in rows:
         pcsv.writerow(row)
