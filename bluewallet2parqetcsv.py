@@ -66,7 +66,7 @@ if __name__ == '__main__':
     rows = []
     for row in bcsv:
         date = row[0]
-        if date == 'Datum':
+        if date == 'Datum' or date == 'Date':
             continue
         for month in _MONTHDICT.keys():
             date = date.replace(' '+month+' ', ' '+_MONTHDICT[month]+' ')
@@ -89,8 +89,11 @@ if __name__ == '__main__':
         shares = row[2]
         price = str(int(get_price(dt)))
         currency = 'EUR'
-        tax = '9'
+        tax = '0'
         fee = '0'
+        if shares.startswith('-'):
+            _type = 'TransferOut'
+            shares = shares[1:]
 
         rows.append([dateStr, timeStr, identifier, shares, assetType, _type, price, currency, tax, fee])
 
